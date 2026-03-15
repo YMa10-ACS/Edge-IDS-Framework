@@ -1,0 +1,3 @@
+Monitoring PIDs: 12007
+timestamp,pid,cpu_percent,rss_mb
+2026-03-15 22:58:12,12007,0.00,16.58

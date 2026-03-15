@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# dataset
+dataset/
+*.csv
+
+# Mac
+.DS_Store
+
+# logs
+*.log
+
+# model weights
+*.pth
+*.pt
