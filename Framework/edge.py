@@ -47,7 +47,9 @@ def get_device(device_name):
 def encode_prepare(X, y, encode_type, device):
     encoder_mapping = {
         "feature_selection": FSEncoder(),
-        "pca": PCAEncoder(n_components=16),
+        "pca16": PCAEncoder(n_components=16),
+        "pca24": PCAEncoder(n_components=24),
+        "pca32": PCAEncoder(n_components=32),
         "dnn16" : DNNEncoder(embedding_dim=16, device=device),
         "dnn24" : DNNEncoder(embedding_dim=24, device=device),
         "dnn32" : DNNEncoder(embedding_dim=32, device=device),
@@ -152,9 +154,9 @@ def main():
     response = transfer_embedding(embedding, metadata)
     if isinstance(response, dict):
         if "test_accuracy" in response:
-            print(f"[CLOUD] accuracy={response['test_accuracy']:.6f}")
+            print(f"[CLOUD] accuracy={response['test_accuracy']:.4f}")
         if "test_f1_score" in response:
-            print(f"[CLOUD] f1_score={response['test_f1_score']:.6f}")
+            print(f"[CLOUD] f1_score={response['test_f1_score']:.4f}")
         if "error" in response:
             print(f"[CLOUD] error={response['error']}")
 

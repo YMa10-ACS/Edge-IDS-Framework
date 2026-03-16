@@ -85,7 +85,7 @@ def svm_build():
                 LinearSVC(
                     C=1.0,
                     max_iter=5000,
-                    tol=1e-2,
+                    tol=1e-3,
                     random_state=42,
                     dual=False,
                 ),
