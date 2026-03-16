@@ -1,0 +1,20 @@
+{
+  "model_path": "AutoEncoder/artifacts/dnn_encoder_fitcache.pt",
+  "input_dim": 36,
+  "embedding_dim": 16,
+  "hidden_dims": [
+    64,
+    32
+  ],
+  "device": "cpu",
+  "train_info": {
+    "trained_at_utc": "2026-03-16T00:40:43.396322+00:00",
+    "epochs": 1,
+    "batch_size": 128,
+    "lr": 0.001,
+    "weight_decay": 0.0,
+    "n_samples": 256,
+    "n_classes": 2,
+    "final_loss": 0.7108633816242218
+  }
+}

@@ -6,6 +6,10 @@ __pycache__/
 dataset/
 *.csv
 
+#record
+records/
+*.record
+
 # Mac
 .DS_Store
 

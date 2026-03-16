@@ -29,7 +29,7 @@ class PCAEncoder:
             random_state=random_state,
         )
     
-    def fit(self, X):
+    def fit(self, X, y):
         self.pca.fit(X)
 
     def forward(self, X):

@@ -66,7 +66,15 @@ class DNNEncoder(nn.Module):
         lr=1e-3,
         weight_decay=0.0,
         verbose=True,
+        cache_config_path=None,
+        force_retrain=False,
     ):
+        if cache_config_path and (not force_retrain) and os.path.exists(cache_config_path):
+            self._load_artifacts_into_self(cache_config_path)
+            if verbose:
+                print(f"[TRAIN] loaded pretrained encoder from: {cache_config_path}")
+            return self._train_info
+
         X_np = self._to_numpy(X).astype(np.float32)
         y_np = self._to_numpy(y)
 
@@ -136,6 +144,38 @@ class DNNEncoder(nn.Module):
             "final_loss": float(last_loss if last_loss is not None else 0.0),
         }
         return self._train_info
+
+    def _load_artifacts_into_self(self, config_path):
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        model_path = config["model_path"]
+        ckpt = torch.load(model_path, map_location=self.device)
+
+        ckpt_input_dim = int(ckpt.get("input_dim", self.input_dim))
+        ckpt_embedding_dim = int(ckpt.get("embedding_dim", self.embedding_dim))
+        ckpt_hidden_dims = tuple(ckpt.get("hidden_dims", list(self.hidden_dims)))
+        if (
+            ckpt_input_dim != self.input_dim
+            or ckpt_embedding_dim != self.embedding_dim
+            or ckpt_hidden_dims != self.hidden_dims
+        ):
+            raise ValueError(
+                "Checkpoint architecture mismatch. "
+                f"ckpt=({ckpt_input_dim}, {ckpt_hidden_dims}, {ckpt_embedding_dim}) "
+                f"current=({self.input_dim}, {self.hidden_dims}, {self.embedding_dim})"
+            )
+
+        self.load_state_dict(ckpt["state_dict"])
+        self.eval()
+
+        label_classes = ckpt.get("label_classes")
+        if label_classes is not None:
+            self._label_encoder = LabelEncoder()
+            self._label_encoder.classes_ = np.asarray(label_classes, dtype=object)
+        else:
+            self._label_encoder = None
+        self._train_info = ckpt.get("train_info", {})
 
     @torch.no_grad()
     def forward(self, x):

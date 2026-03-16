@@ -28,7 +28,7 @@ from support import load_dataset, transfer_embedding, data_preprocess, perf_coun
 from PCA.encoder import PCAEncoder
 from Feature_Selection.encoder import FSEncoder
 from ResNeXt.encoder import RNEncoder
-from AutoEncoder.encoder import DNNEncoder
+from AutoEncoder.encoder_new import DNNEncoder
 
 
 DATASET_PATH = os.path.join(PROJECT_ROOT, "dataset/Edge-IIoTset/")
@@ -44,7 +44,7 @@ def get_device(device_name):
     return torch.device("cpu")
 
 
-def encode_prepare(X, encode_type, device):
+def encode_prepare(X, y, encode_type, device):
     encoder_mapping = {
         "feature_selection": FSEncoder(),
         "pca": PCAEncoder(n_components=16),
@@ -63,7 +63,7 @@ def encode_prepare(X, encode_type, device):
     model = encoder_mapping[encode_type]
     fit_fn = getattr(model, "fit", None)
     if callable(fit_fn):
-        fit_fn(X)
+        fit_fn(X, y)
     return model
 
 @perf_counter
@@ -145,7 +145,7 @@ def main():
     df = load_dataset(args.dataset, args.percentage)
     y = df["Attack_label"].copy()
     X = data_preprocess(df)
-    model = encode_prepare(X, args.encoder, device)
+    model = encode_prepare(X, y, args.encoder, device)
 
     embedding, metadata = encode_features_in_chunks(model, X, y, num_chunks=10)
     transfer_embedding(embedding, metadata)
