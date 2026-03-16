@@ -131,13 +131,17 @@ def transfer_embedding(embedding, metadata):
     headers = {"Meta": json.dumps(metadata)}
 
     try:
-        requests.post(
+        resp = requests.post(
             "http://127.0.0.1:8000",
             data=payload,
             headers=headers,
             timeout=3600,
         )
+        resp.raise_for_status()
+        try:
+            return resp.json()
+        except ValueError:
+            return {"status_code": resp.status_code, "text": resp.text}
     except Exception as exc:
-        print(f"[WARN] async transfer failed: {exc}")
-
-    return True
+        print(f"[WARN] transfer failed: {exc}")
+        return {"error": str(exc)}

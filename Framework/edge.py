@@ -141,6 +141,7 @@ def main():
 
     device = get_device(args.device)
     print("Using device:", device)
+    print("Using encoder:", args.encoder)
 
     df = load_dataset(args.dataset, args.percentage)
     y = df["Attack_label"].copy()
@@ -148,7 +149,14 @@ def main():
     model = encode_prepare(X, y, args.encoder, device)
 
     embedding, metadata = encode_features_in_chunks(model, X, y, num_chunks=10)
-    transfer_embedding(embedding, metadata)
+    response = transfer_embedding(embedding, metadata)
+    if isinstance(response, dict):
+        if "test_accuracy" in response:
+            print(f"[CLOUD] accuracy={response['test_accuracy']:.6f}")
+        if "test_f1_score" in response:
+            print(f"[CLOUD] f1_score={response['test_f1_score']:.6f}")
+        if "error" in response:
+            print(f"[CLOUD] error={response['error']}")
 
 
 if __name__ == "__main__":

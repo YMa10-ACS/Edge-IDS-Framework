@@ -10,18 +10,17 @@ import time
 
 import numpy as np
 from flask import Flask, jsonify, request
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
 from support import perf_counter
 
 app = Flask(__name__)
 
 # Global model state in memory (single-process service).
 svm_model = None
-train_done = False
 validation_info = {}
 
 
@@ -72,7 +71,6 @@ def decode_embedding(raw, meta):
 
 
 def extract_labels(X):
-    labels = X[-1]
     y = X[:, -1].astype(np.float32)
     X = X[:, :-1]
     
@@ -82,14 +80,14 @@ def extract_labels(X):
 def svm_build():
     return Pipeline(
         steps=[
-            ("scaler", StandardScaler()),
             (
                 "svm",
-                SVC(
-                    kernel = "linear",
-                    C = 1.0,
-                    gamma = "scale",
+                LinearSVC(
+                    C=1.0,
+                    max_iter=5000,
+                    tol=1e-2,
                     random_state=42,
+                    dual=False,
                 ),
             ),
         ]
@@ -113,7 +111,7 @@ def train_once_then_predict():
       - labels not required.
       - Only returns predictions.
     """
-    global svm_model, train_done, validation_info
+    global svm_model, validation_info
     t0 = time.perf_counter()
 
     try:
@@ -138,10 +136,13 @@ def train_once_then_predict():
         y_test_pred = svm_predict(svm_model, X_test)
         print("svm model predict finished!")
         test_acc = float(accuracy_score(y_test, y_test_pred))
+        test_f1 = float(f1_score(y_test, y_test_pred, average="weighted"))
         print(f"test acc = {test_acc}")   
+        print(f"test f1 = {test_f1}")
 
         validation_info = {
             "test_accuracy": test_acc,
+            "test_f1_score": test_f1,
             "n_train": int(len(y_train)),
             "n_test": int(len(y_test)),
             "n_features": int(X.shape[1]),
