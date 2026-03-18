@@ -13,7 +13,7 @@ from flask import Flask, jsonify, request
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
 from support import perf_counter
 
@@ -21,6 +21,7 @@ app = Flask(__name__)
 
 # Global model state in memory (single-process service).
 svm_model = None
+rf_model = None
 validation_info = {}
 
 
@@ -101,6 +102,25 @@ def svm_train(svm_model, X_train, y_train):
 def svm_predict(svm_model, X) :
     return svm_model.predict(X)
 
+
+@perf_counter
+def rf_build():
+    return RandomForestClassifier(
+        n_estimators=200,
+        random_state=42,
+        n_jobs=-1,
+    )
+
+
+@perf_counter
+def rf_train(rf_model, X_train, y_train):
+    rf_model.fit(X_train, y_train)
+
+
+@perf_counter
+def rf_predict(rf_model, X):
+    return rf_model.predict(X)
+
 @app.route("/", methods=["POST"])
 def train_once_then_predict():
     """
@@ -111,7 +131,7 @@ def train_once_then_predict():
       - labels not required.
       - Only returns predictions.
     """
-    global svm_model, validation_info
+    global svm_model, rf_model, validation_info
     t0 = time.perf_counter()
 
     try:
@@ -135,14 +155,33 @@ def train_once_then_predict():
 
         y_test_pred = svm_predict(svm_model, X_test)
         print("svm model predict finished!")
-        test_acc = float(accuracy_score(y_test, y_test_pred))
-        test_f1 = float(f1_score(y_test, y_test_pred, average="weighted"))
-        print(f"test acc = {test_acc}")   
-        print(f"test f1 = {test_f1}")
+        svc_acc = float(accuracy_score(y_test, y_test_pred))
+        svc_f1 = float(f1_score(y_test, y_test_pred, average="weighted"))
+        print(f"linear_svc acc = {svc_acc}")
+        print(f"linear_svc f1 = {svc_f1}")
+
+        print("Begin build random_forest model")
+        rf_model = rf_build()
+        print("Built random_forest model finish")
+        rf_train(rf_model, X_train, y_train)
+        print("random_forest fit finished!")
+
+        rf_test_pred = rf_predict(rf_model, X_test)
+        print("random_forest model predict finished!")
+        rf_acc = float(accuracy_score(y_test, rf_test_pred))
+        rf_f1 = float(f1_score(y_test, rf_test_pred, average="weighted"))
+        print(f"random_forest acc = {rf_acc}")
+        print(f"random_forest f1 = {rf_f1}")
 
         validation_info = {
-            "test_accuracy": test_acc,
-            "test_f1_score": test_f1,
+            # Backward-compatible fields (use LinearSVC as default baseline)
+            "test_accuracy": svc_acc,
+            "test_f1_score": svc_f1,
+            # Explicit per-model metrics
+            "linear_svc_accuracy": svc_acc,
+            "linear_svc_f1_score": svc_f1,
+            "random_forest_accuracy": rf_acc,
+            "random_forest_f1_score": rf_f1,
             "n_train": int(len(y_train)),
             "n_test": int(len(y_test)),
             "n_features": int(X.shape[1]),

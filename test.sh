@@ -6,7 +6,7 @@ records_dir="records"
 mkdir -p "$records_dir"
 run_ts="$(date +%Y%m%d_%H%M%S)"
 summary_file="${records_dir}/encoder_metrics_${run_ts}.csv"
-echo "timestamp,encoder,accuracy,f1_score,exit_code,record_file,edge_log" > "$summary_file"
+echo "run_id,timestamp,encoder,embedding_dim,encode_duration_s,cpu_avg_pct,cpu_max_pct,rss_before_mb,rss_peak_mb,embedding_bytes,rss_net_growth_mb,encoding_overhead_excl_embedding_mb,test_accuracy,test_f1_score" > "$summary_file"
 
 encoders=(
   "feature_selection"
@@ -28,22 +28,31 @@ for enc in "${encoders[@]}"; do
 
     ./Framework/edge.py \
       --encoder "$enc" \
-      --dataset "$dataset" > "$edge_log" 2>&1 &
+      --dataset "$dataset" \
+      --run-id "$run_ts" > "$edge_log" 2>&1 &
     EDGE_PID=$!
     python3 monitor_edge_cpu.py --pid "$EDGE_PID" --interval 1 > "$record_file"
-    if wait "$EDGE_PID"; then
-        exit_code=0
+    wait "$EDGE_PID"
+
+    metrics_line="$(grep -F '[ENCODER_METRICS]' "$edge_log" | tail -n1 || true)"
+    if [[ -n "$metrics_line" ]]; then
+        metrics_json="${metrics_line#\[ENCODER_METRICS\] }"
+        csv_row="$(python3 -c '
+import json, sys
+d = json.loads(sys.argv[1])
+cols = [
+    "run_id","timestamp","encoder","embedding_dim","encode_duration_s","cpu_avg_pct",
+    "cpu_max_pct","rss_before_mb","rss_peak_mb","embedding_bytes","rss_net_growth_mb",
+    "encoding_overhead_excl_embedding_mb","test_accuracy","test_f1_score"
+]
+print(",".join(str(d.get(k, "")) for k in cols))
+' "$metrics_json")"
+        echo "$csv_row" >> "$summary_file"
+        echo "[SUMMARY] encoder=${enc} metrics captured"
     else
-        exit_code=$?
+        echo "${run_ts},${ts},${enc},,,,,,,,,,," >> "$summary_file"
+        echo "[SUMMARY] encoder=${enc} metrics not found in ${edge_log}"
     fi
-
-    acc="$(grep -oE '\[CLOUD\] accuracy=[0-9.]+$' "$edge_log" | tail -n1 | cut -d= -f2 || true)"
-    f1="$(grep -oE '\[CLOUD\] f1_score=[0-9.]+$' "$edge_log" | tail -n1 | cut -d= -f2 || true)"
-    acc="${acc:-NA}"
-    f1="${f1:-NA}"
-
-    echo "${ts},${enc},${acc},${f1},${exit_code},${record_file},${edge_log}" >> "$summary_file"
-    echo "[SUMMARY] encoder=${enc} accuracy=${acc} f1=${f1} exit_code=${exit_code}"
 done
 
 echo "Saved summary to: ${summary_file}"
