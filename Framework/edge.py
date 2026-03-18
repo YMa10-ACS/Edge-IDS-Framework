@@ -98,15 +98,30 @@ def get_device(device_name):
 def encode_prepare(X, y, encode_type, device):
     encoder_mapping = {
         "feature_selection": FSEncoder(),
+        "pca4": PCAEncoder(n_components=4),
+        "pca8": PCAEncoder(n_components=8),
+        "pca12": PCAEncoder(n_components=12),
         "pca16": PCAEncoder(n_components=16),
+        "pca20": PCAEncoder(n_components=20),
         "pca24": PCAEncoder(n_components=24),
+        "pca28": PCAEncoder(n_components=28),
         "pca32": PCAEncoder(n_components=32),
+        "dnn4" : DNNEncoder(embedding_dim=4, device=device),
+        "dnn8" : DNNEncoder(embedding_dim=8, device=device),
+        "dnn12" : DNNEncoder(embedding_dim=12, device=device),
         "dnn16" : DNNEncoder(embedding_dim=16, device=device),
+        "dnn20" : DNNEncoder(embedding_dim=20, device=device),
         "dnn24" : DNNEncoder(embedding_dim=24, device=device),
+        "dnn28" : DNNEncoder(embedding_dim=28, device=device),
         "dnn32" : DNNEncoder(embedding_dim=32, device=device),
-        "resnext16": RNEncoder(embedding_dim=16),
-        "resnext24": RNEncoder(embedding_dim=24),
-        "resnext32": RNEncoder(embedding_dim=32),
+        "resnext4": RNEncoder(embedding_dim=4, device=device),
+        "resnext8": RNEncoder(embedding_dim=8, device=device),
+        "resnext12": RNEncoder(embedding_dim=12, device=device),
+        "resnext16": RNEncoder(embedding_dim=16, device=device),
+        "resnext20": RNEncoder(embedding_dim=20, device=device),
+        "resnext24": RNEncoder(embedding_dim=24, device=device),
+        "resnext28": RNEncoder(embedding_dim=28, device=device),
+        "resnext32": RNEncoder(embedding_dim=32, device=device),
     }
     if encode_type not in encoder_mapping:
         raise ValueError(

@@ -50,7 +50,6 @@ class DNNEncoder(nn.Module):
         epochs=20,
         batch_size=2048,
         lr=1e-3,
-        weight_decay=0.0,
         verbose=True,
     ):
         X_np = X.astype(np.float32, copy=False)
@@ -62,7 +61,6 @@ class DNNEncoder(nn.Module):
         optimizer = torch.optim.Adam(
             list(self.encoder.parameters()) + list(self.decoder.parameters()),
             lr=lr,
-            weight_decay=weight_decay,
         )
 
         self.train()

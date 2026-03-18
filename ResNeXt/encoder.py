@@ -52,7 +52,7 @@ class ResNeXtBackbone(nn.Module):
 class RNEncoder:
     """
     ResNeXt-based encoder for tabular data.
-    Supports output embedding dimension 16 or 32.
+    Supports positive output embedding dimensions.
     """
 
     def __init__(
@@ -64,8 +64,8 @@ class RNEncoder:
         batch_size=256,
         device=None,
     ):
-        if embedding_dim not in [ 16, 24, 32 ]:
-            raise ValueError("embedding_dim must be 16 24, or 32")
+        if embedding_dim <= 0:
+            raise ValueError("embedding_dim must be a positive integer")
         if image_size < 8:
             raise ValueError("image_size must be >= 8")
 
@@ -73,7 +73,7 @@ class RNEncoder:
         self.image_size = image_size
         self.target_len = image_size * image_size
         self.batch_size = batch_size
-        self.device = device
+        self.device = device if device is not None else torch.device("cpu")
 
         self.model = ResNeXtBackbone(
             embedding_dim=embedding_dim,
