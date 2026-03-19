@@ -24,7 +24,8 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from support import load_dataset, transfer_embedding, data_preprocess, perf_counter
+from support import load_dataset, data_preprocess, perf_counter
+from monitor_transfer import monitored_transfer_embedding
 from PCA.encoder import PCAEncoder
 from Feature_Selection.encoder import FSEncoder
 from ResNeXt.encoder import RNEncoder
@@ -151,7 +152,12 @@ def main():
     model = encode_prepare(X, y, args.encoder, device)
 
     embedding, metadata = encode_features_in_chunks(model, X, y, num_chunks=10)
-    response = transfer_embedding(embedding, metadata)
+    metrics = {
+        "encoder": args.encoder,
+    }
+    response, transfer_metrics = monitored_transfer_embedding(embedding, metadata)
+    metrics.update(transfer_metrics)
+
     if isinstance(response, dict):
         if "test_accuracy" in response:
             print(f"[CLOUD] accuracy={response['test_accuracy']:.4f}")
@@ -160,6 +166,7 @@ def main():
         if "error" in response:
             print(f"[CLOUD] error={response['error']}")
 
+    print("[TRANSFER_METRICS]", metrics)
 
 if __name__ == "__main__":
     main()

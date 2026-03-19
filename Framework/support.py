@@ -46,7 +46,7 @@ def load_dataset(dataset_path, percentage) :
         raise FileNotFoundError(f"Dataset not found: {dataset_path}")
     with open(dataset_path) as f:
         header = f.readline()
-        print(f" len = {len(header.split(","))}")
+        print(f" len = {len(header.split(','))}")
     df = pd.read_csv(dataset_path, sep=",", quoting=csv.QUOTE_MINIMAL, low_memory=False)
 
     if percentage < 1.0 :
