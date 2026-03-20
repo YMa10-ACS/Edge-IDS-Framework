@@ -92,7 +92,6 @@ class DNNEncoder(nn.Module):
             "epochs": int(epochs),
             "batch_size": int(batch_size),
             "lr": float(lr),
-            "weight_decay": float(weight_decay),
             "n_samples": int(X_np.shape[0]),
             "final_recon_loss": float(last_loss if last_loss is not None else 0.0),
         }

@@ -8,6 +8,7 @@ import json
 import time
 import threading
 from functools import wraps
+from datetime import datetime
 
 import pandas as pd
 import numpy as np
@@ -16,6 +17,104 @@ import csv
 
 import ipaddress
 from sklearn.preprocessing import StandardScaler
+from monitor_network import monitored_transfer_embedding
+
+
+METRICS_FIELDS = [
+    "run_id",
+    "timestamp",
+    "encoder",
+    "embedding_dim",
+    "encode_duration_s",
+    "cpu_avg_pct",
+    "cpu_max_pct",
+    "rss_before_mb",
+    "rss_peak_mb",
+    "embedding_bytes",
+    "rss_net_growth_mb",
+    "test_accuracy",
+    "test_f1_score",
+]
+
+
+def build_local_metrics(
+    run_id,
+    encoder,
+    embedding,
+    metadata,
+    encode_duration_s,
+    rss_before_mb,
+    sampler_samples,
+):
+    cpu_samples = [cpu for cpu, _ in sampler_samples]
+    rss_samples = [rss for _, rss in sampler_samples]
+    cpu_avg_pct = float(np.mean(cpu_samples)) if cpu_samples else 0.0
+    cpu_max_pct = float(np.max(cpu_samples)) if cpu_samples else 0.0
+    rss_peak_mb = float(np.max(rss_samples)) if rss_samples else float(rss_before_mb)
+
+    emb_shape = metadata.get("shape", [])
+    if isinstance(emb_shape, (list, tuple)) and len(emb_shape) >= 2:
+        embedding_dim = int(emb_shape[1])
+        embedding_rows = int(emb_shape[0])
+    else:
+        embedding_dim = int(embedding.shape[1] - 1)
+        embedding_rows = int(embedding.shape[0])
+
+    embedding_bytes = int(embedding_rows * embedding_dim * np.dtype(np.float32).itemsize)
+    rss_net_growth_mb = float(rss_peak_mb - float(rss_before_mb))
+
+    return {
+        "run_id": str(run_id),
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "encoder": str(encoder),
+        "embedding_dim": embedding_dim,
+        "encode_duration_s": round(float(encode_duration_s), 6),
+        "cpu_avg_pct": round(cpu_avg_pct, 4),
+        "cpu_max_pct": round(cpu_max_pct, 4),
+        "rss_before_mb": round(float(rss_before_mb), 4),
+        "rss_peak_mb": round(float(rss_peak_mb), 4),
+        "embedding_bytes": embedding_bytes,
+        "rss_net_growth_mb": round(rss_net_growth_mb, 4),
+        "test_accuracy": "",
+        "test_f1_score": "",
+    }
+
+
+def merge_cloud_metrics(metrics, response):
+    merged = dict(metrics)
+    if not isinstance(response, dict):
+        return merged
+
+    if "test_accuracy" in response:
+        print(f"[CLOUD] accuracy={response['test_accuracy']:.4f}")
+        merged["test_accuracy"] = round(float(response["test_accuracy"]), 6)
+    if "test_f1_score" in response:
+        print(f"[CLOUD] f1_score={response['test_f1_score']:.4f}")
+        merged["test_f1_score"] = round(float(response["test_f1_score"]), 6)
+    if "error" in response:
+        print(f"[CLOUD] error={response['error']}")
+    return merged
+
+
+def append_metrics_csv(metrics, csv_path=None, records_dir="records"):
+    run_id = str(metrics.get("run_id", "")).strip()
+    if csv_path:
+        target_path = csv_path
+    else:
+        suffix = run_id if run_id else datetime.now().strftime("%Y%m%d_%H%M%S")
+        target_path = os.path.join(records_dir, f"encoder_metrics_{suffix}.csv")
+
+    target_dir = os.path.dirname(target_path)
+    if target_dir:
+        os.makedirs(target_dir, exist_ok=True)
+
+    write_header = not os.path.exists(target_path) or os.path.getsize(target_path) == 0
+    with open(target_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
+        if write_header:
+            writer.writeheader()
+        writer.writerow({key: metrics.get(key, "") for key in METRICS_FIELDS})
+    return target_path
 
 
 
@@ -121,27 +220,12 @@ def data_preprocess(df) :
 
 @perf_counter
 def transfer_embedding(embedding, metadata):
-    if hasattr(embedding, "detach"):  # torch.Tensor
-        embedding = embedding.detach().cpu().numpy()
-
-    metadata = dict(metadata)
-    metadata["shape"] = list(embedding.shape)
-    metadata["dtype"] = "float32"
-    payload = embedding.tobytes()
-    headers = {"Meta": json.dumps(metadata)}
-
-    try:
-        resp = requests.post(
-            "http://127.0.0.1:8000",
-            data=payload,
-            headers=headers,
-            timeout=3600,
-        )
-        resp.raise_for_status()
-        try:
-            return resp.json()
-        except ValueError:
-            return {"status_code": resp.status_code, "text": resp.text}
-    except Exception as exc:
-        print(f"[WARN] transfer failed: {exc}")
-        return {"error": str(exc)}
+    response_data, transfer_metrics = monitored_transfer_embedding(
+        embedding=embedding,
+        metadata=metadata,
+        url="http://127.0.0.1:8000",
+        timeout=3600,
+        port=8000,
+    )
+    print("[TRANSFER_METRICS] " + json.dumps(transfer_metrics, ensure_ascii=True))
+    return response_data
