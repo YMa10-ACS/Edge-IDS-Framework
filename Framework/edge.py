@@ -39,7 +39,8 @@ from PCA.encoder import PCAEncoder
 from Feature_Selection.encoder import FSEncoder
 from ResNeXt.encoder import RNEncoder
 from ResNeXt.encoder_1d import RN1DEncoder
-from AutoEncoder.encoder_new import DNNEncoder
+from AutoEncoder.encoder_new import DNNEncoder as AutoEncoderEncoder
+from DNN.encoder import DNNEncoder as SupervisedDNNEncoder
 
 
 DATASET_PATH = os.path.join(PROJECT_ROOT, "dataset/Edge-IIoTset/")
@@ -66,14 +67,22 @@ def encode_prepare(X, y, encode_type, device):
         "pca24": PCAEncoder(n_components=24),
         "pca28": PCAEncoder(n_components=28),
         "pca32": PCAEncoder(n_components=32),
-        "dnn4" : DNNEncoder(embedding_dim=4, device=device),
-        "dnn8" : DNNEncoder(embedding_dim=8, device=device),
-        "dnn12" : DNNEncoder(embedding_dim=12, device=device),
-        "dnn16" : DNNEncoder(embedding_dim=16, device=device),
-        "dnn20" : DNNEncoder(embedding_dim=20, device=device),
-        "dnn24" : DNNEncoder(embedding_dim=24, device=device),
-        "dnn28" : DNNEncoder(embedding_dim=28, device=device),
-        "dnn32" : DNNEncoder(embedding_dim=32, device=device),
+        "dnn4" : SupervisedDNNEncoder(embedding_dim=4, device=device),
+        "dnn8" : SupervisedDNNEncoder(embedding_dim=8, device=device),
+        "dnn12" : SupervisedDNNEncoder(embedding_dim=12, device=device),
+        "dnn16" : SupervisedDNNEncoder(embedding_dim=16, device=device),
+        "dnn20" : SupervisedDNNEncoder(embedding_dim=20, device=device),
+        "dnn24" : SupervisedDNNEncoder(embedding_dim=24, device=device),
+        "dnn28" : SupervisedDNNEncoder(embedding_dim=28, device=device),
+        "dnn32" : SupervisedDNNEncoder(embedding_dim=32, device=device),
+        "autoencoder4" : AutoEncoderEncoder(embedding_dim=4, device=device),
+        "autoencoder8" : AutoEncoderEncoder(embedding_dim=8, device=device),
+        "autoencoder12" : AutoEncoderEncoder(embedding_dim=12, device=device),
+        "autoencoder16" : AutoEncoderEncoder(embedding_dim=16, device=device),
+        "autoencoder20" : AutoEncoderEncoder(embedding_dim=20, device=device),
+        "autoencoder24" : AutoEncoderEncoder(embedding_dim=24, device=device),
+        "autoencoder28" : AutoEncoderEncoder(embedding_dim=28, device=device),
+        "autoencoder32" : AutoEncoderEncoder(embedding_dim=32, device=device),
         "resnext4": RNEncoder(embedding_dim=4, device=device),
         "resnext8": RNEncoder(embedding_dim=8, device=device),
         "resnext12": RNEncoder(embedding_dim=12, device=device),

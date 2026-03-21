@@ -15,6 +15,22 @@ ensure_summary_header() {
 }
 
 encoders=(
+"dnn4"
+"dnn8"
+"dnn12"
+"dnn16"
+"dnn20"
+"dnn24"
+"dnn28"
+"dnn32"
+"autoencoder4"
+"autoencoder8"
+"autoencoder12"
+"autoencoder16"
+"autoencoder20"
+"autoencoder24"
+"autoencoder28"
+"autoencoder32"
 "resnext1d4"
 "resnext1d8"
 "resnext1d12"

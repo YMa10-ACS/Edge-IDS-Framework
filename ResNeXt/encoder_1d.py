@@ -7,6 +7,7 @@ Author: Yaoquan Ma
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
 
 class ResNeXt1DBlock(nn.Module):
@@ -105,25 +106,103 @@ class RN1DEncoder:
         batch_size=512,
         device=None,
     ):
-        if embedding_dim <= 0:
-            raise ValueError("embedding_dim must be a positive integer")
-
-        self.embedding_dim = embedding_dim
-        self.batch_size = batch_size
+        self.embedding_dim = int(embedding_dim)
+        self.batch_size = int(batch_size)
         self.device = device if device is not None else torch.device("cpu")
 
         self.model = ResNeXt1DBackbone(
-            embedding_dim=embedding_dim,
+            embedding_dim=self.embedding_dim,
             cut_at=cut_at,
             groups=groups,
             width_per_group=width_per_group,
         ).to(self.device).eval()
 
-    @torch.no_grad()
+    def fit(
+        self,
+        X,
+        y,
+        epochs=3,
+        batch_size=2048,
+        lr=0.01,
+        momentum=0.9,
+        weight_decay=1e-4,
+        verbose=True,
+    ):
+        x_np = np.asarray(X, dtype=np.float32)
+        y_np = np.asarray(y).reshape(-1)
+
+        _, y_idx = np.unique(y_np, return_inverse=True)
+        n_classes = len(np.unique(y_idx))
+
+        x_tensor = torch.from_numpy(x_np).unsqueeze(1)
+        y_tensor = torch.from_numpy(y_idx.astype(np.int64))
+        loader = DataLoader(
+            TensorDataset(x_tensor, y_tensor),
+            batch_size=int(batch_size),
+            shuffle=True,
+        )
+
+        cls_head = nn.Linear(self.embedding_dim, n_classes).to(self.device)
+        optimizer = torch.optim.SGD(
+            list(self.model.parameters()) + list(cls_head.parameters()),
+            lr=float(lr),
+            momentum=float(momentum),
+            weight_decay=float(weight_decay),
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=max(int(epochs), 1)
+        )
+        criterion = nn.CrossEntropyLoss()
+
+        self.model.train()
+        cls_head.train()
+
+        last_loss = None
+        last_acc = None
+        for epoch in range(1, int(epochs) + 1):
+            total = 0
+            correct = 0
+            total_loss = 0.0
+
+            for xb, yb in loader:
+                xb = xb.to(self.device, dtype=torch.float32)
+                yb = yb.to(self.device, dtype=torch.long)
+
+                optimizer.zero_grad(set_to_none=True)
+                emb = self.model(xb)
+                logits = cls_head(emb)
+                loss = criterion(logits, yb)
+                loss.backward()
+                optimizer.step()
+
+                bs = xb.size(0)
+                total += bs
+                total_loss += float(loss.item()) * bs
+                pred = torch.argmax(logits, dim=1)
+                correct += int((pred == yb).sum().item())
+
+            scheduler.step()
+
+            last_loss = total_loss / max(total, 1)
+            last_acc = correct / max(total, 1)
+            if verbose:
+                print(
+                    f"[TRAIN][RN1D] epoch={epoch:03d}/{int(epochs):03d} "
+                    f"loss={last_loss:.6f} acc={last_acc:.4f} "
+                    f"lr={optimizer.param_groups[0]['lr']:.6f}"
+                )
+
+        self.model.eval()
+        return {
+            "epochs": int(epochs),
+            "final_loss": float(last_loss if last_loss is not None else 0.0),
+            "final_train_acc": float(last_acc if last_acc is not None else 0.0),
+            "n_classes": int(n_classes),
+        }
+
+    @torch.inference_mode()
     def forward(self, X):
         x = np.asarray(X, dtype=np.float32)
-        if x.ndim != 2:
-            raise ValueError(f"Expected 2D input [n_samples, n_features], got shape={x.shape}")
 
         # [B, D] -> [B, 1, D]
         x_tensor = torch.from_numpy(x).unsqueeze(1).to(self.device)
