@@ -38,6 +38,7 @@ from monitor import read_process_cpu_rss, ProcessSampler
 from PCA.encoder import PCAEncoder
 from Feature_Selection.encoder import FSEncoder
 from ResNeXt.encoder import RNEncoder
+from ResNeXt.encoder_1d import RN1DEncoder
 from AutoEncoder.encoder_new import DNNEncoder
 
 
@@ -81,6 +82,14 @@ def encode_prepare(X, y, encode_type, device):
         "resnext24": RNEncoder(embedding_dim=24, device=device),
         "resnext28": RNEncoder(embedding_dim=28, device=device),
         "resnext32": RNEncoder(embedding_dim=32, device=device),
+        "resnext1d4": RN1DEncoder(embedding_dim=4, device=device),
+        "resnext1d8": RN1DEncoder(embedding_dim=8, device=device),
+        "resnext1d12": RN1DEncoder(embedding_dim=12, device=device),
+        "resnext1d16": RN1DEncoder(embedding_dim=16, device=device),
+        "resnext1d20": RN1DEncoder(embedding_dim=20, device=device),
+        "resnext1d24": RN1DEncoder(embedding_dim=24, device=device),
+        "resnext1d28": RN1DEncoder(embedding_dim=28, device=device),
+        "resnext1d32": RN1DEncoder(embedding_dim=32, device=device),
     }
     if encode_type not in encoder_mapping:
         raise ValueError(

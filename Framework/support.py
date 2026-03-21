@@ -22,9 +22,14 @@ TRANSFER_METRIC_FIELDS = [
     "metadata_bytes",
     "estimated_request_mb",
     "transfer_duration_s",
+    "network_packets",
     "network_tx_bytes",
     "network_total_bytes",
     "network_total_mb",
+    "cloud_receive_duration_s",
+    "network_latency_s",
+    "inference_duration_s",
+    "inference_per_record_s",
 ]
 
 METRICS_FIELDS = [
@@ -101,6 +106,12 @@ def merge_cloud_metrics(metrics, response):
         merged["test_f1_score"] = round(float(response["test_f1_score"]), 6)
     if "error" in response:
         print(f"[CLOUD] error={response['error']}")
+    if "inference_duration_s" in response and response["inference_duration_s"] is not None:
+        merged["inference_duration_s"] = round(float(response["inference_duration_s"]), 6)
+    if "inference_per_record_s" in response and response["inference_per_record_s"] is not None:
+        merged["inference_per_record_s"] = round(
+            float(response["inference_per_record_s"]), 9
+        )
     return merged
 
 
@@ -246,4 +257,11 @@ def transfer_embedding(embedding, metadata):
         port=8000,
     )
     print("[TRANSFER_METRICS] " + json.dumps(transfer_metrics, ensure_ascii=True))
+    print(
+        "[TRANSFER_NET] "
+        f"network_packets={transfer_metrics.get('network_packets', '')} "
+        f"network_tx_bytes={transfer_metrics.get('network_tx_bytes', '')} "
+        f"network_rx_bytes={transfer_metrics.get('network_rx_bytes', '')} "
+        f"network_total_bytes={transfer_metrics.get('network_total_bytes', '')}"
+    )
     return response_data, transfer_metrics

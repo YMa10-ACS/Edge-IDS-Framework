@@ -8,7 +8,7 @@ library(patchwork)
 
 setwd('/Users/sunspringmark/Library/CloudStorage/OneDrive-Personal/Study/Master_Galway/ACS/Semester 2/CT5193 Case Studies in Cybersecurity Analytics/CaseStudy/Source/records/')
 
-df <- read_csv("./encoder_metrics_20260319_142750.csv")
+df <- read_csv("./encoder_metrics_20260321_152436.csv")
 
 df2 <- df %>%
   extract(
@@ -46,17 +46,14 @@ mem_data <- df2 %>%
   ) %>%
   ungroup()
 
+label_type <- mem_data %>%
+  group_by(encodertype) %>%
+  slice_max(dimension, n = 1, with_ties = FALSE)
+
 # memory metrics
 g_mem <- ggplot(mem_data, aes(x = dimension, y = rss_net_growth_mb, color = encodertype)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
-  geom_label(
-    aes(y = mem_label_y, label = mem_label),
-    size = 2.4,
-    label.size = 0.15,
-    fill = "white",
-    show.legend = FALSE
-  ) +
   scale_color_brewer(palette = "Dark2") +
   scale_y_log10(
     labels = scales::label_number(accuracy = 0.01, big.mark = "")
@@ -67,10 +64,17 @@ g_mem <- ggplot(mem_data, aes(x = dimension, y = rss_net_growth_mb, color = enco
     y = "Memory (MB, log10 scale)",
     color = "Encoder Type"
   ) +
+  geom_text(
+    data = label_type,
+    aes(label = encodertype),
+    hjust = -0.3, vjust = 0.5, size = 4,
+    show.legend = FALSE
+  ) +
   theme_minimal() + 
   theme(
     axis.text.x = element_text(size = 11),
-    plot.margin = margin(10, 20, 10, 10) 
+    plot.margin = margin(10, 20, 10, 10),
+    legend.position = "none"
   )
 
 cpu_data <- df2 %>% 
@@ -88,16 +92,13 @@ cpu_data <- df2 %>%
   ) %>%
   ungroup()
 
+label_type <- cpu_data %>%
+  group_by(encodertype) %>%
+  slice_max(dimension, n = 1, with_ties = FALSE)
+
 g_cpu <- ggplot(cpu_data, aes(x = dimension, y = cpu_time_sec, color = encodertype)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
-  geom_label(
-    aes(y = cpu_label_y, label = cpu_label),
-    size = 2.4,
-    label.size = 0.15,
-    fill = "white",
-    show.legend = FALSE
-  ) +
   scale_color_brewer(palette = "Dark2") +
   scale_y_log10(
     labels = scales::label_number(accuracy = 0.01, big.mark = "")
@@ -108,11 +109,98 @@ g_cpu <- ggplot(cpu_data, aes(x = dimension, y = cpu_time_sec, color = encoderty
     y = "CPU Time (core-seconds, log10 scale)",
     color = "Encoder Type"
   ) +
+  geom_text(
+    data = label_type,
+    aes(label = encodertype),
+    hjust = -0.3, vjust = 0.5, size = 4,
+    show.legend = FALSE
+  ) +
   theme_minimal() + 
   theme(
     axis.title.x = element_text(),
     axis.text.x  = element_text(size = 11, colour = "black"),
-    axis.ticks.x = element_line(colour = "black")
+    axis.ticks.x = element_line(colour = "black"),
+    legend.position = "none"
   )
 
-g_cpu / g_mem
+net_traffic <- df2 %>%
+  select(encodertype, dimension, network_tx_bytes) %>%
+  group_by(dimension)
+
+
+g_net_traffic <- ggplot(
+  net_traffic,
+  aes(x = dimension, y = network_tx_bytes / (1024^2), color = encodertype)
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_label(
+    aes(label = round(network_tx_bytes / (1024^2), 2)),
+    size = 2.4,
+    label.size = 0.15,
+    fill = "white",
+    show.legend = FALSE
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = dims, labels = dims) +
+  labs(
+    y = "Network TX (MB)",
+    color = "Encoder Type"
+  ) +
+  theme_minimal()
+
+number_record <- 2219201
+
+latency_base <- df2 %>%
+  mutate(
+    dimension = as.integer(dimension),
+    encode_duration_s = as.numeric(encode_duration_s / number_record),
+    network_latency_s = as.numeric(network_latency_s / number_record),
+    inference_per_record_s = as.numeric(inference_per_record_s)
+  ) %>%
+  filter(
+    !is.na(dimension),
+    !is.na(encode_duration_s),
+    !is.na(network_latency_s),
+    !is.na(inference_per_record_s)
+  ) %>%
+  mutate(total_latency_s = encode_duration_s + network_latency_s + inference_per_record_s)
+
+latency_long <- latency_base %>%
+  select(encodertype, dimension, total_latency_s,
+         encode_duration_s, network_latency_s, inference_per_record_s) %>%
+  pivot_longer(
+    cols = c(encode_duration_s, network_latency_s, inference_per_record_s),
+    names_to = "component",
+    values_to = "latency_s"
+  ) %>%
+  mutate(
+    component = factor(
+      component,
+      levels = c("encode_duration_s", "network_latency_s", "inference_per_record_s"),
+      labels = c("Encode", "Network", "Inference/record")
+    )
+  )
+
+totals_df <- latency_base %>%
+  select(encodertype, dimension, total_latency_s)
+
+g_latency <- ggplot(latency_long, aes(x = dimension, y = latency_s, fill = component)) +
+  geom_col(width = 0.75) +
+  geom_text(
+    data = totals_df,
+    aes(x = dimension, y = total_latency_s, label = sprintf("%.3f", total_latency_s)),
+    inherit.aes = FALSE, vjust = -0.35, size = 3
+  ) +
+  facet_wrap(~ encodertype, scales = "free_y") +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(
+    title = "Latency Breakdown by Dimension",
+    x = "Feature Dimension",
+    y = "Latency (seconds)",
+    fill = "Component"
+  ) +
+  theme_minimal()
+
+g_latency
+

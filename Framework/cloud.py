@@ -117,7 +117,20 @@ def train_once_then_predict():
 
     try:
         meta = load_meta()
-        X = decode_embedding(request.data, meta)
+        edge_send_start_ns = request.headers.get("X-Edge-Send-Start-Ns", "")
+        edge_send_start_ns = int(edge_send_start_ns) if str(edge_send_start_ns).isdigit() else None
+
+        recv_t0 = time.perf_counter()
+        raw_payload = request.get_data(cache=False, as_text=False)
+        cloud_receive_duration_s = time.perf_counter() - recv_t0
+        cloud_receive_done_ns = time.time_ns()
+        edge_to_cloud_receive_s = None
+        if edge_send_start_ns is not None:
+            delta = cloud_receive_done_ns - edge_send_start_ns
+            if delta >= 0:
+                edge_to_cloud_receive_s = delta / 1e9
+
+        X = decode_embedding(raw_payload, meta)
         X, y = extract_labels(X)
 
         X_train, X_test, y_train, y_test = train_test_split(
@@ -134,7 +147,13 @@ def train_once_then_predict():
         svm_train(svm_model, X_train, y_train)
         print("svm fit finished!")
 
+        infer_t0 = time.perf_counter()
         y_test_pred = svm_predict(svm_model, X_test)
+        inference_duration_s = time.perf_counter() - infer_t0
+        inference_records = int(len(X_test))
+        inference_per_record_s = (
+            inference_duration_s / inference_records if inference_records > 0 else None
+        )
         print("svm model predict finished!")
         svc_acc = float(accuracy_score(y_test, y_test_pred))
         svc_f1 = float(f1_score(y_test, y_test_pred, average="weighted"))
@@ -159,6 +178,18 @@ def train_once_then_predict():
                 "status": "trained_once",
                 "task": "train_test",
                 **validation_info,
+                "cloud_receive_duration_s": round(float(cloud_receive_duration_s), 6),
+                "edge_to_cloud_receive_s": (
+                    round(float(edge_to_cloud_receive_s), 6)
+                    if edge_to_cloud_receive_s is not None
+                    else None
+                ),
+                "inference_duration_s": round(float(inference_duration_s), 6),
+                "inference_per_record_s": (
+                    round(float(inference_per_record_s), 9)
+                    if inference_per_record_s is not None
+                    else None
+                ),
                 "elapsed_sec": round(time.perf_counter() - t0, 6),
             }
         ), 200

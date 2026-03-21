@@ -8,7 +8,7 @@ library(patchwork)
 
 setwd('/Users/sunspringmark/Library/CloudStorage/OneDrive-Personal/Study/Master_Galway/ACS/Semester 2/CT5193 Case Studies in Cybersecurity Analytics/CaseStudy/Source/records/')
 
-df <- read_csv("./encoder_metrics_20260319_142750.csv")
+df <- read_csv("./encoder_metrics_20260321_135901.csv")
 
 df2 <- df %>%
   extract(
