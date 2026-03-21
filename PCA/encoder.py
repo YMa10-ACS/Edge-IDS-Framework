@@ -37,10 +37,4 @@ class PCAEncoder:
         Encode features into PCA embedding.
         """
         embedding = self.pca.transform(X).astype("float32")
-
-        metadata = {
-            "shape": list(embedding.shape),
-            "dtype": str(embedding.dtype),
-        }
-        return embedding, metadata
-
+        return embedding

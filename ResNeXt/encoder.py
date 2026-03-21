@@ -101,9 +101,4 @@ class RNEncoder:
             emb = self.model(batch)
             out.append(emb.cpu())
         embedding = torch.cat(out, dim=0).numpy().astype(np.float32)
-
-        metadata = {
-            "shape": list(embedding.shape),
-            "dtype": str(embedding.dtype),
-        }
-        return embedding, metadata
+        return embedding

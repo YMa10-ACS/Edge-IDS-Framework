@@ -30,6 +30,7 @@ from support import (
     data_preprocess,
     perf_counter,
     build_local_metrics,
+    merge_transfer_metrics,
     merge_cloud_metrics,
     append_metrics_csv,
 )
@@ -94,16 +95,15 @@ def encode_prepare(X, y, encode_type, device):
 
 @perf_counter
 def encode_features(model, X, y):
-    embedding, metadata = model.forward(X)
+    embedding = model.forward(X)
     labels = y.to_numpy(dtype=np.float32).reshape(-1, 1)
     embedding_with_label = np.concatenate([embedding, labels], axis=1).astype(np.float32)
-    return embedding_with_label, metadata
+    return embedding_with_label
 
 
 def encode_features_in_chunks(model, X, y, num_chunks=10):
     idx_chunks = np.array_split(np.arange(X.shape[0]), num_chunks)
     chunk_embeddings = []
-    final_metadata = None
     total_t0 = time.perf_counter()
     total_rows = 0
 
@@ -112,21 +112,21 @@ def encode_features_in_chunks(model, X, y, num_chunks=10):
         y_chunk = y.iloc[idx].reset_index(drop=True)
 
         t0 = time.perf_counter()
-        emb_chunk, meta_chunk = encode_features(model, X_chunk, y_chunk)
+        emb_chunk = encode_features(model, X_chunk, y_chunk)
         dt = time.perf_counter() - t0
 
         total_rows += len(idx)
         chunk_embeddings.append(emb_chunk)
-        final_metadata = meta_chunk
         print(
             f"[CHUNK {i:02d}] rows={len(idx)} "
             f"emb_shape={emb_chunk.shape} time={dt:.4f}s"
         )
 
     embedding = np.concatenate(chunk_embeddings, axis=0).astype(np.float32)
-    metadata = dict(final_metadata) if final_metadata is not None else {}
-    metadata["shape"] = list(embedding.shape[:-1] + (embedding.shape[1] - 1,))
-    metadata["dtype"] = "float32"
+    metadata = {
+        "shape": list(embedding.shape[:-1] + (embedding.shape[1] - 1,)),
+        "dtype": "float32",
+    }
 
     total_dt = time.perf_counter() - total_t0
     avg_dt = total_dt / max(len(chunk_embeddings), 1)
@@ -177,7 +177,8 @@ def main():
         sampler_samples=sampler.samples,
     )
 
-    response = transfer_embedding(embedding, metadata)
+    response, transfer_metrics = transfer_embedding(embedding, metadata)
+    metrics = merge_transfer_metrics(metrics, transfer_metrics)
     metrics = merge_cloud_metrics(metrics, response)
 
     append_metrics_csv(metrics, csv_path=(args.metrics_csv or None))

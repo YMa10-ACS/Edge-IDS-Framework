@@ -103,11 +103,7 @@ class DNNEncoder(nn.Module):
 
         x_tensor = torch.from_numpy(x_np).to(self.device, dtype=torch.float32)
         embedding = self.encoder(x_tensor).cpu().numpy().astype(np.float32)
-        metadata = {
-            "shape": list(embedding.shape),
-            "dtype": str(embedding.dtype),
-        }
-        return embedding, metadata
+        return embedding
 
     @torch.no_grad()
     def reconstruct(self, x):

@@ -6,19 +6,26 @@ Author: Yaoquan Ma
 import os
 import json
 import time
-import threading
 from functools import wraps
 from datetime import datetime
 
 import pandas as pd
 import numpy as np
-import requests
 import csv
 
 import ipaddress
 from sklearn.preprocessing import StandardScaler
 from monitor_network import monitored_transfer_embedding
 
+TRANSFER_METRIC_FIELDS = [
+    "payload_bytes",
+    "metadata_bytes",
+    "estimated_request_mb",
+    "transfer_duration_s",
+    "network_tx_bytes",
+    "network_total_bytes",
+    "network_total_mb",
+]
 
 METRICS_FIELDS = [
     "run_id",
@@ -32,6 +39,7 @@ METRICS_FIELDS = [
     "rss_peak_mb",
     "embedding_bytes",
     "rss_net_growth_mb",
+    *TRANSFER_METRIC_FIELDS,
     "test_accuracy",
     "test_f1_score",
 ]
@@ -93,6 +101,16 @@ def merge_cloud_metrics(metrics, response):
         merged["test_f1_score"] = round(float(response["test_f1_score"]), 6)
     if "error" in response:
         print(f"[CLOUD] error={response['error']}")
+    return merged
+
+
+def merge_transfer_metrics(metrics, transfer_metrics):
+    merged = dict(metrics)
+    if not isinstance(transfer_metrics, dict):
+        return merged
+    for key in TRANSFER_METRIC_FIELDS:
+        if key in transfer_metrics:
+            merged[key] = transfer_metrics[key]
     return merged
 
 
@@ -228,4 +246,4 @@ def transfer_embedding(embedding, metadata):
         port=8000,
     )
     print("[TRANSFER_METRICS] " + json.dumps(transfer_metrics, ensure_ascii=True))
-    return response_data
+    return response_data, transfer_metrics

@@ -6,7 +6,7 @@ records_dir="records"
 mkdir -p "$records_dir"
 run_ts="$(date +%Y%m%d_%H%M%S)"
 summary_file="${records_dir}/encoder_metrics_${run_ts}.csv"
-header="run_id,timestamp,encoder,embedding_dim,encode_duration_s,cpu_avg_pct,cpu_max_pct,rss_before_mb,rss_peak_mb,embedding_bytes,rss_net_growth_mb,test_accuracy,test_f1_score"
+header="run_id,timestamp,encoder,embedding_dim,encode_duration_s,cpu_avg_pct,cpu_max_pct,rss_before_mb,rss_peak_mb,embedding_bytes,rss_net_growth_mb,payload_bytes,metadata_bytes,estimated_request_mb,transfer_duration_s,network_tx_bytes,network_total_bytes,network_total_mb,test_accuracy,test_f1_score"
 
 ensure_summary_header() {
     if [[ ! -f "$summary_file" || ! -s "$summary_file" ]]; then
@@ -84,6 +84,8 @@ d = json.loads(sys.argv[1])
 cols = [
     "run_id","timestamp","encoder","embedding_dim","encode_duration_s","cpu_avg_pct",
     "cpu_max_pct","rss_before_mb","rss_peak_mb","embedding_bytes","rss_net_growth_mb",
+    "payload_bytes","metadata_bytes","estimated_request_mb","transfer_duration_s",
+    "network_tx_bytes","network_total_bytes","network_total_mb",
     "test_accuracy","test_f1_score"
 ]
 print(",".join(str(d.get(k, "")) for k in cols))
@@ -93,7 +95,23 @@ print(",".join(str(d.get(k, "")) for k in cols))
         echo "[SUMMARY] encoder=${enc} metrics captured (fallback log parse)"
     else
         ensure_summary_header
-        echo "${run_ts},${ts},${enc},,,,,,,,,," >> "$summary_file"
+        csv_row="$(python3 -c '
+import sys
+run_ts, ts, enc = sys.argv[1], sys.argv[2], sys.argv[3]
+cols = [
+    "run_id","timestamp","encoder","embedding_dim","encode_duration_s","cpu_avg_pct",
+    "cpu_max_pct","rss_before_mb","rss_peak_mb","embedding_bytes","rss_net_growth_mb",
+    "payload_bytes","metadata_bytes","estimated_request_mb","transfer_duration_s",
+    "network_tx_bytes","network_total_bytes","network_total_mb",
+    "test_accuracy","test_f1_score"
+]
+row = {k: "" for k in cols}
+row["run_id"] = run_ts
+row["timestamp"] = ts
+row["encoder"] = enc
+print(",".join(str(row[k]) for k in cols))
+' "$run_ts" "$ts" "$enc")"
+        echo "$csv_row" >> "$summary_file"
         echo "[SUMMARY] encoder=${enc} failed(status=${edge_status}) or metrics missing: ${edge_log}"
     fi
 done

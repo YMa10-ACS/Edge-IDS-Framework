@@ -40,9 +40,4 @@ class DNNEncoder(nn.Module):
             )
 
         embedding = self.net(x_tensor.to(self.device)).cpu().numpy().astype(np.float32)
-        metadata = {
-            "shape": list(embedding.shape),
-            "dtype": str(embedding.dtype),
-        }
-
-        return embedding, metadata
+        return embedding

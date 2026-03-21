@@ -13,20 +13,15 @@ def read_process_cpu_rss(pid):
         text=True,
         check=False,
     )
-    if proc.returncode != 0:
+    if proc.returncode != 0 or not proc.stdout:
         return None
-    text = proc.stdout.strip()
-    if not text:
-        return None
-    parts = text.split()
+    parts = proc.stdout.strip().split()
     if len(parts) < 2:
         return None
     try:
-        cpu_pct = float(parts[0])
-        rss_mb = int(parts[1]) / 1024.0
+        return float(parts[0]), int(parts[1]) / 1024.0
     except ValueError:
         return None
-    return cpu_pct, rss_mb
 
 
 class ProcessSampler:
@@ -52,4 +47,3 @@ class ProcessSampler:
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
-

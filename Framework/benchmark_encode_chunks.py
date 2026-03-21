@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from Framework.edge import DATASET, encode_features, get_device
+from Framework.edge import DATASET, encode_prepare, encode_features, get_device
 from Framework.support import data_preprocess, load_dataset
 
 
@@ -41,6 +41,7 @@ def main():
     df = load_dataset(args.dataset, args.percentage)
     y_all = df["Attack_label"].copy().reset_index(drop=True)
     X_all = data_preprocess(df)
+    model = encode_prepare(X_all, y_all, args.encoder, device)
 
     n = X_all.shape[0]
     indices = np.array_split(np.arange(n), args.chunks)
@@ -57,14 +58,14 @@ def main():
         y_chunk = y_all.iloc[idx].reset_index(drop=True)
 
         t0 = time.perf_counter()
-        embedding, metadata = encode_features(X_chunk, y_chunk, args.encoder, device)
+        embedding = encode_features(model, X_chunk, y_chunk)
         dt = time.perf_counter() - t0
 
         total_rows += len(idx)
         total_encode_sec += dt
         print(
             f"[CHUNK {i:02d}] rows={len(idx)} "
-            f"emb_shape={embedding.shape} meta_shape={metadata.get('shape')} "
+            f"emb_shape={embedding.shape} "
             f"time={dt:.4f}s"
         )
 
