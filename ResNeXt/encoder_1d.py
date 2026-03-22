@@ -135,12 +135,13 @@ class RN1DEncoder:
         n_classes = len(np.unique(y_idx))
 
         x_tensor = torch.from_numpy(x_np).unsqueeze(1)
-        y_tensor = torch.from_numpy(y_idx.astype(np.int64))
+        y_tensor = torch.from_numpy(np.asarray(y_idx, dtype=np.int64))
         loader = DataLoader(
             TensorDataset(x_tensor, y_tensor),
             batch_size=int(batch_size),
             shuffle=True,
         )
+        total_batches = len(loader)
 
         cls_head = nn.Linear(self.embedding_dim, n_classes).to(self.device)
         optimizer = torch.optim.SGD(
@@ -156,6 +157,12 @@ class RN1DEncoder:
 
         self.model.train()
         cls_head.train()
+        if verbose:
+            print(
+                f"[TRAIN][RN1D] start epochs={int(epochs)} batch_size={int(batch_size)} "
+                f"samples={len(x_np)} batches={total_batches}",
+                flush=True,
+            )
 
         last_loss = None
         last_acc = None
@@ -164,7 +171,7 @@ class RN1DEncoder:
             correct = 0
             total_loss = 0.0
 
-            for xb, yb in loader:
+            for step, (xb, yb) in enumerate(loader, start=1):
                 xb = xb.to(self.device, dtype=torch.float32)
                 yb = yb.to(self.device, dtype=torch.long)
 
@@ -180,6 +187,12 @@ class RN1DEncoder:
                 total_loss += float(loss.item()) * bs
                 pred = torch.argmax(logits, dim=1)
                 correct += int((pred == yb).sum().item())
+                if verbose and (step == 1 or step % 10 == 0 or step == total_batches):
+                    print(
+                        f"[TRAIN][RN1D] epoch={epoch:03d}/{int(epochs):03d} "
+                        f"batch={step:04d}/{total_batches:04d} loss={loss.item():.6f}",
+                        flush=True,
+                    )
 
             scheduler.step()
 
@@ -189,7 +202,8 @@ class RN1DEncoder:
                 print(
                     f"[TRAIN][RN1D] epoch={epoch:03d}/{int(epochs):03d} "
                     f"loss={last_loss:.6f} acc={last_acc:.4f} "
-                    f"lr={optimizer.param_groups[0]['lr']:.6f}"
+                    f"lr={optimizer.param_groups[0]['lr']:.6f}",
+                    flush=True,
                 )
 
         self.model.eval()
@@ -212,5 +226,5 @@ class RN1DEncoder:
             batch = x_tensor[start : start + self.batch_size]
             emb = self.model(batch)
             out.append(emb.cpu())
-        embedding = torch.cat(out, dim=0).numpy().astype(np.float32)
+        embedding = torch.cat(out, dim=0).numpy()
         return embedding

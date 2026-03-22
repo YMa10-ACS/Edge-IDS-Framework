@@ -24,14 +24,6 @@ encoders=(
 "pca24"
 "pca28"
 "pca32"
-"dnn4"
-"dnn8"
-"dnn12"
-"dnn16"
-"dnn20"
-"dnn24"
-"dnn28"
-"dnn32"
 "autoencoder4"
 "autoencoder8"
 "autoencoder12"
@@ -40,6 +32,14 @@ encoders=(
 "autoencoder24"
 "autoencoder28"
 "autoencoder32"
+"dnn4"
+"dnn8"
+"dnn12"
+"dnn16"
+"dnn20"
+"dnn24"
+"dnn28"
+"dnn32"
 "resnext4"
 "resnext8"
 "resnext12"
@@ -61,7 +61,8 @@ for enc in "${encoders[@]}"; do
 
     ./Framework/edge.py \
       --encoder "$enc" \
-      --dataset "$dataset" \
+      --percentage 0.15 \
+	  --dataset "$dataset" \
       --run-id "$run_ts" \
       --metrics-csv "$summary_file" > "$edge_log" 2>&1 &
     EDGE_PID=$!

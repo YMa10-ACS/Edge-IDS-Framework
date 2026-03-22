@@ -52,10 +52,11 @@ class DNNEncoder(nn.Module):
         lr=1e-3,
         verbose=True,
     ):
-        X_np = X.astype(np.float32, copy=False)
+        X_np = np.asarray(X, dtype=np.float32)
 
         x_tensor = torch.from_numpy(X_np)
         loader = DataLoader(TensorDataset(x_tensor), batch_size=batch_size, shuffle=True)
+        total_batches = len(loader)
 
         criterion = nn.MSELoss()
         optimizer = torch.optim.Adam(
@@ -64,11 +65,17 @@ class DNNEncoder(nn.Module):
         )
 
         self.train()
+        if verbose:
+            print(
+                f"[TRAIN][AE] start epochs={int(epochs)} batch_size={int(batch_size)} "
+                f"samples={len(X_np)} batches={total_batches}",
+                flush=True,
+            )
         last_loss = None
         for epoch in range(1, int(epochs) + 1):
             total_loss = 0.0
             total = 0
-            for (xb,) in loader:
+            for step, (xb,) in enumerate(loader, start=1):
                 xb = xb.to(self.device, dtype=torch.float32)
                 optimizer.zero_grad()
                 z = self.encoder(xb)
@@ -80,10 +87,19 @@ class DNNEncoder(nn.Module):
                 bs = xb.size(0)
                 total += bs
                 total_loss += loss.item() * bs
+                if verbose and (step == 1 or step % 10 == 0 or step == total_batches):
+                    print(
+                        f"[TRAIN][AE] epoch={epoch:03d}/{int(epochs):03d} "
+                        f"batch={step:04d}/{total_batches:04d} loss={loss.item():.6f}",
+                        flush=True,
+                    )
 
             last_loss = total_loss / max(total, 1)
             if verbose:
-                print(f"[TRAIN][AE] epoch={epoch:03d}/{epochs:03d} recon_loss={last_loss:.6f}")
+                print(
+                    f"[TRAIN][AE] epoch={epoch:03d}/{epochs:03d} recon_loss={last_loss:.6f}",
+                    flush=True,
+                )
 
         self.eval()
         self._train_info = {
@@ -99,16 +115,16 @@ class DNNEncoder(nn.Module):
 
     @torch.no_grad()
     def forward(self, x):
-        x_np = x.astype(np.float32, copy=False)
+        x_np = np.asarray(x, dtype=np.float32)
 
-        x_tensor = torch.from_numpy(x_np).to(self.device, dtype=torch.float32)
-        embedding = self.encoder(x_tensor).cpu().numpy().astype(np.float32)
+        x_tensor = torch.from_numpy(x_np).to(self.device)
+        embedding = self.encoder(x_tensor).cpu().numpy()
         return embedding
 
     @torch.no_grad()
     def reconstruct(self, x):
-        x_np = x.astype(np.float32, copy=False)
+        x_np = np.asarray(x, dtype=np.float32)
 
-        x_tensor = torch.from_numpy(x_np).to(self.device, dtype=torch.float32)
-        x_hat = self.decoder(self.encoder(x_tensor)).cpu().numpy().astype(np.float32)
+        x_tensor = torch.from_numpy(x_np).to(self.device)
+        x_hat = self.decoder(self.encoder(x_tensor)).cpu().numpy()
         return x_hat

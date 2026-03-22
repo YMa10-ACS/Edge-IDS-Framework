@@ -203,11 +203,11 @@ def data_preprocess(df) :
     df["tcp.srcport"] = df["tcp.srcport"].fillna(0).astype(int)
 
     # arp.src.proto_ipv4 and arp.dst.proto_ipv4 are always 0.0
-    df.drop("arp.dst.proto_ipv4", axis = 1, inplace = True)
-    df.drop("arp.src.proto_ipv4", axis = 1, inplace = True)
+    # df.drop("arp.dst.proto_ipv4", axis = 1, inplace = True)
+    # df.drop("arp.src.proto_ipv4", axis = 1, inplace = True)
 
     # The element of icmp.checksum are always 0.0
-    df.drop("icmp.checksum", axis = 1, inplace = True)
+    # df.drop("icmp.checksum", axis = 1, inplace = True)
     df.drop("http.file_data", axis = 1, inplace = True)
 
     df.drop("http.request.uri.query", axis = 1, inplace = True)
@@ -225,7 +225,7 @@ def data_preprocess(df) :
 
     # delete ALL mqtt columnn
     mqtt_cols = [col for col in df.columns if "mqtt" in col.lower()]
-    df = df.drop(columns=mqtt_cols)
+    # df = df.drop(columns=mqtt_cols)
 
     df.drop("Attack_type", axis = 1, inplace =  True)
     df.drop("Attack_label", axis = 1, inplace =  True)

@@ -37,10 +37,9 @@ from support import (
 from monitor import read_process_cpu_rss, ProcessSampler
 from PCA.encoder import PCAEncoder
 from Feature_Selection.encoder import FSEncoder
-from ResNeXt.encoder import RNEncoder
 from ResNeXt.encoder_1d import RN1DEncoder
-from AutoEncoder.encoder_new import DNNEncoder as AutoEncoderEncoder
-from DNN.encoder import DNNEncoder as SupervisedDNNEncoder
+from AutoEncoder.encoder_new import DNNEncoder as AutoEncoder
+from DNN.encoder import DNNEncoder
 
 
 DATASET_PATH = os.path.join(PROJECT_ROOT, "dataset/Edge-IIoTset/")
@@ -57,6 +56,7 @@ def get_device(device_name):
 
 
 def encode_prepare(X, y, encode_type, device):
+    input_dim = int(X.shape[1])
     encoder_mapping = {
         "feature_selection": FSEncoder(),
         "pca4": PCAEncoder(n_components=4),
@@ -67,38 +67,30 @@ def encode_prepare(X, y, encode_type, device):
         "pca24": PCAEncoder(n_components=24),
         "pca28": PCAEncoder(n_components=28),
         "pca32": PCAEncoder(n_components=32),
-        "dnn4" : SupervisedDNNEncoder(embedding_dim=4, device=device),
-        "dnn8" : SupervisedDNNEncoder(embedding_dim=8, device=device),
-        "dnn12" : SupervisedDNNEncoder(embedding_dim=12, device=device),
-        "dnn16" : SupervisedDNNEncoder(embedding_dim=16, device=device),
-        "dnn20" : SupervisedDNNEncoder(embedding_dim=20, device=device),
-        "dnn24" : SupervisedDNNEncoder(embedding_dim=24, device=device),
-        "dnn28" : SupervisedDNNEncoder(embedding_dim=28, device=device),
-        "dnn32" : SupervisedDNNEncoder(embedding_dim=32, device=device),
-        "autoencoder4" : AutoEncoderEncoder(embedding_dim=4, device=device),
-        "autoencoder8" : AutoEncoderEncoder(embedding_dim=8, device=device),
-        "autoencoder12" : AutoEncoderEncoder(embedding_dim=12, device=device),
-        "autoencoder16" : AutoEncoderEncoder(embedding_dim=16, device=device),
-        "autoencoder20" : AutoEncoderEncoder(embedding_dim=20, device=device),
-        "autoencoder24" : AutoEncoderEncoder(embedding_dim=24, device=device),
-        "autoencoder28" : AutoEncoderEncoder(embedding_dim=28, device=device),
-        "autoencoder32" : AutoEncoderEncoder(embedding_dim=32, device=device),
-        "resnext4": RNEncoder(embedding_dim=4, device=device),
-        "resnext8": RNEncoder(embedding_dim=8, device=device),
-        "resnext12": RNEncoder(embedding_dim=12, device=device),
-        "resnext16": RNEncoder(embedding_dim=16, device=device),
-        "resnext20": RNEncoder(embedding_dim=20, device=device),
-        "resnext24": RNEncoder(embedding_dim=24, device=device),
-        "resnext28": RNEncoder(embedding_dim=28, device=device),
-        "resnext32": RNEncoder(embedding_dim=32, device=device),
-        "resnext1d4": RN1DEncoder(embedding_dim=4, device=device),
-        "resnext1d8": RN1DEncoder(embedding_dim=8, device=device),
-        "resnext1d12": RN1DEncoder(embedding_dim=12, device=device),
-        "resnext1d16": RN1DEncoder(embedding_dim=16, device=device),
-        "resnext1d20": RN1DEncoder(embedding_dim=20, device=device),
-        "resnext1d24": RN1DEncoder(embedding_dim=24, device=device),
-        "resnext1d28": RN1DEncoder(embedding_dim=28, device=device),
-        "resnext1d32": RN1DEncoder(embedding_dim=32, device=device),
+        "autoencoder4" : AutoEncoder(input_dim=input_dim, embedding_dim=4, device=device),
+        "autoencoder8" : AutoEncoder(input_dim=input_dim, embedding_dim=8, device=device),
+        "autoencoder12" : AutoEncoder(input_dim=input_dim, embedding_dim=12, device=device),
+        "autoencoder16" : AutoEncoder(input_dim=input_dim, embedding_dim=16, device=device),
+        "autoencoder20" : AutoEncoder(input_dim=input_dim, embedding_dim=20, device=device),
+        "autoencoder24" : AutoEncoder(input_dim=input_dim, embedding_dim=24, device=device),
+        "autoencoder28" : AutoEncoder(input_dim=input_dim, embedding_dim=28, device=device),
+        "autoencoder32" : AutoEncoder(input_dim=input_dim, embedding_dim=32, device=device),
+        "dnn4" : DNNEncoder(input_dim=input_dim, embedding_dim=4, device=device),
+        "dnn8" : DNNEncoder(input_dim=input_dim, embedding_dim=8, device=device),
+        "dnn12" : DNNEncoder(input_dim=input_dim, embedding_dim=12, device=device),
+        "dnn16" : DNNEncoder(input_dim=input_dim, embedding_dim=16, device=device),
+        "dnn20" : DNNEncoder(input_dim=input_dim, embedding_dim=20, device=device),
+        "dnn24" : DNNEncoder(input_dim=input_dim, embedding_dim=24, device=device),
+        "dnn28" : DNNEncoder(input_dim=input_dim, embedding_dim=28, device=device),
+        "dnn32" : DNNEncoder(input_dim=input_dim, embedding_dim=32, device=device),
+        "resnext4": RN1DEncoder(embedding_dim=4, device=device),
+        "resnext8": RN1DEncoder(embedding_dim=8, device=device),
+        "resnext12": RN1DEncoder(embedding_dim=12, device=device),
+        "resnext16": RN1DEncoder(embedding_dim=16, device=device),
+        "resnext20": RN1DEncoder(embedding_dim=20, device=device),
+        "resnext24": RN1DEncoder(embedding_dim=24, device=device),
+        "resnext28": RN1DEncoder(embedding_dim=28, device=device),
+        "resnext32": RN1DEncoder(embedding_dim=32, device=device),
     }
     if encode_type not in encoder_mapping:
         raise ValueError(
