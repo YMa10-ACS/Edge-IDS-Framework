@@ -33,7 +33,7 @@ latency_long <- latency_base %>%
     component = factor(
       component,
       levels = c("encode_latency_ns", "network_latency_ns", "inference_latency_ns"),
-      labels = c("Encode", "Network", "Inference/record")
+      labels = c("Feature extraction", "Network", "Inference")
     )
   )
 
@@ -53,7 +53,7 @@ g_latency <- ggplot(latency_long, aes(x = dimension, y = latency_ns, fill = comp
   labs(
     title = "Total Latency",
     x = "Feature Dimension",
-    y = "Latency (ns)",
+    y = "Latency (ns/record)",
     fill = "Component"
   ) +
   theme_minimal()
