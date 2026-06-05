@@ -84,7 +84,10 @@
   
   mem_data <- df2 %>%
     select(encoder, dimension, rss_net_growth_mb, encodertype)
-  
+  mem_data$encodertype <- factor(mem_data$encodertype,
+                       levels = c("autoencoder", "dnn", "feature_selection", "pca", "resnext"),
+                       labels = c("AutoEncoder", "DNN", "Feature Selection", "PCA", "ResNeXt")
+  )
   g_mem <- ggplot(mem_data, aes(x = dimension, y = rss_net_growth_mb, color = encodertype)) +
     geom_line(linewidth = 1) +
     geom_point(size = 2) +

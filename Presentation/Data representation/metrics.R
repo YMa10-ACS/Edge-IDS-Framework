@@ -36,6 +36,11 @@ accuracy_data <- df2 %>%
   select(encodertype, dimension, test_accuracy) %>%
   filter(!is.na(dimension))
 
+accuracy_data$encodertype <- factor(accuracy_data$encodertype,
+                               levels = c("autoencoder", "dnn", "feature_selection", "pca", "resnext"),
+                               labels = c("AutoEncoder", "DNN", "Feature Selection", "PCA", "ResNeXt")
+)
+
 g_acc <- ggplot(accuracy_data, aes(x = dimension, y = test_accuracy, color = encodertype)) +
   geom_line(linewidth = 1) +
   geom_point(size = 2) +
@@ -58,6 +63,12 @@ g_acc <- ggplot(accuracy_data, aes(x = dimension, y = test_accuracy, color = enc
     axis.text.x  = element_text(size = 11, colour = "black"),
     axis.ticks.x = element_line(colour = "black")
   )
+
+
+f1_data$encodertype <- factor(f1_data$encodertype,
+                                    levels = c("autoencoder", "dnn", "feature_selection", "pca", "resnext"),
+                                    labels = c("AutoEncoder", "DNN", "Feature Selection", "PCA", "ResNeXt")
+)
 
 g_f1 <- ggplot(f1_data, aes(x = dimension, y = test_f1_score, color = encodertype)) +
   geom_line(linewidth = 1) +

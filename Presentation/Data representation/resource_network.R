@@ -1,5 +1,25 @@
 number_record <- 2219201
 
+df <- read_csv("./encoder_metrics_20260322_112410.csv")
+
+df2 <- df %>%
+  extract(
+    encoder,
+    into = c("encodertype", "dimension"),
+    regex = "([A-Za-z_]+)(\\d+)?",
+    remove = FALSE
+  ) %>%
+  mutate(dimension = as.integer(dimension))
+
+df2 <- df2 %>%
+  filter(encodertype %in% c("autoencoder", "dnn", "pca"))
+
+df2$encodertype <- factor(
+  df2$encodertype,
+  levels = c("autoencoder", "dnn", "pca"),
+  labels = c("AutoEncoder", "DNN", "PCA")
+)
+
 latency_base <- df2 %>%
   mutate(
     dimension = as.integer(dimension),
@@ -33,7 +53,7 @@ latency_long <- latency_base %>%
     component = factor(
       component,
       levels = c("encode_latency_ns", "network_latency_ns", "inference_latency_ns"),
-      labels = c("Feature extraction", "Network", "Inference")
+      labels = c("Feature Transformation", "Network", "Inference")
     )
   )
 
@@ -59,3 +79,6 @@ g_latency <- ggplot(latency_long, aes(x = dimension, y = latency_ns, fill = comp
   theme_minimal()
 
 g_latency
+
+ggsave("latency_lightweight_methods.png", g_latency,
+       width = 7.2, height = 2.8, dpi = 300)
